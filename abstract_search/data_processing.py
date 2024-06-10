@@ -30,6 +30,8 @@ def main():
         batch = df.iloc[offset:offset+last].copy().reset_index()
         batch.to_feather(f'arxiv_{i}.feather')
     
+    df = []
+    
     for i in range(10):
         df[i]['text'] = df[i]['text'].apply(parse_text)
         df[i] = df[i].join(pd.json_normalize(df[i]['text']), how='left', validate='1:1').drop(columns=['text'])
