@@ -1,0 +1,5 @@
+setuptools>=61.0
+streamlit>=1.35.0
+pandas>=2.2.2
+sentence_transformers>=3.0.1
+pinecone>=4.0.0
