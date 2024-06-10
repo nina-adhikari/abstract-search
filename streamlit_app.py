@@ -8,7 +8,14 @@ import os
 from pinecone import Pinecone
 from transformers import AutoTokenizer, AutoModel
 
+SHOW_CLASSIC_SEARCH = False
+NUM_RESULTS = 10
+
 MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
+DATA_FILE_NAME = 'data/arxiv_all_small.parquet'
+INDEX_NAME = "arxiv-semantic-search"
+
+API_KEY = st.secrets['PINECONE_API_KEY']
 #tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 #model = AutoModel.from_pretrained(MODEL_NAME)
 
@@ -20,10 +27,8 @@ def load_model(name):
 def load_data(file_name):
     return pd.read_parquet(file_name).drop(columns=['index'])
 
-api_key = st.secrets['PINECONE_API_KEY']
-
 @st.cache_resource
-def load_index(index_name):
+def load_index(index_name, api_key):
     pc = Pinecone(api_key=api_key)
     return pc.Index(index_name)
 
@@ -62,57 +67,55 @@ def traverse(tree):
     return results
 
 def prettify(result):
-    return f'''[{result['Title']}]({result['id']})  
+    return f'''**{result['Title']}**  
+    <small>[{result['id'].strip("http://arxiv.org/abs/")}]({result['id']})</small>  
     <small>*{result['Authors']}*</small>  
-    **Abstract**: {result['Abstract'][:200]}...'''
+    **Abstract**: {result['Abstract']}'''
 
-def semantic_search(text, model, df, index):
+def show_results(results):
+    for i in range(len(results)):
+        result = results[i]
+        st.markdown(
+            str(i+1) + ". " + prettify(result),
+            unsafe_allow_html=True
+        )
+def semantic_search(text, model, df, index, top_k=10):
     encoded = model.encode(text).tolist()
 
-    results = index.query(vector=encoded, top_k=10, include_metadata=False)
+    results = index.query(vector=encoded, top_k=top_k, include_metadata=False)
     return [df.iloc[int(entry['id'])]['id'] for entry in results['matches']]
 
 def main():
     model = load_model(MODEL_NAME)
-    df = load_data('data/arxiv_all_small.parquet')
-    index = load_index("arxiv-semantic-search")
+    df = load_data(DATA_FILE_NAME)
+    index = load_index(INDEX_NAME, API_KEY)
     st.title("Abstract search")
 
     st.write(
         "This app demonstrates a semantic search functionality by using the \
     entered search term to return the ArXiv abstracts closest to it. The ArXiv \
-    is updated through June 8, 2024."
+    archive is updated through June 8, 2024."
     )
 
     form = st.form("search")
 
-    query = form.text_input("Search ArXiv abstracts:")
+    query = form.text_input("Search ArXiv abstracts: :red[\*]", placeholder="Enter search term")
     #button = form.form_submit_button("Search", on_click=search, args=[query])
     button = form.form_submit_button("Search")
     if button:
         if not query:
-            st.write("Empty")
+            form.error("Search term is empty!")
         else:
-            arxiv_results = traverse(query_arxiv(query))
-            sem = semantic_search(query, model, df, index)
+            sem = semantic_search(query, model=model, df=df, index=index, top_k=NUM_RESULTS)
             semantic_results = traverse(query_arxiv(sem, search=False))
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("Ordinary search")
-                for i in range(len(arxiv_results)):
-                    result = arxiv_results[i]
-                    st.markdown(
-                        str(i+1) + ". " + prettify(result),
-                        unsafe_allow_html=True
-                    )
-            with col2:
-                st.subheader("Semantic search")
-                for i in range(len(semantic_results)):
-                    result = semantic_results[i]
-                    st.markdown(
-                        str(i+1) + ". " + prettify(result),
-                        unsafe_allow_html=True
-                    )
+            with st.container():
+                st.subheader("Semantic search results")
+                show_results(semantic_results)
+            if SHOW_CLASSIC_SEARCH:
+                arxiv_results = traverse(query_arxiv(query))
+                with st.container():
+                    st.subheader("Ordinary search results")
+                    show_results(arxiv_results)
 
 if __name__=="__main__":
     main()
