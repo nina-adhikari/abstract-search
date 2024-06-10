@@ -17,7 +17,7 @@ def load_json(filename=JSON_FILE):
         #data = list(map(json.loads, data))
 
     df = pd.DataFrame(data)
-    print("Dataframe Loaded")
+    #print("Dataframe Loaded")
     df.rename(columns={0: 'text'}, inplace=True)
     df.reset_index(inplace=True)
     df.drop(columns=['index'], inplace=True)
@@ -28,7 +28,7 @@ def write_batches(dataframe, num_batches, dir=DIR):
     for i in range(num_batches):
         offset = i * length
         last = length if i < num_batches-1 else len(dataframe) - offset
-        print(f'offset: {offset}, last: {offset+last}')
+        #print(f'offset: {offset}, last: {offset+last}')
         batch = pd.DataFrame(dataframe.iloc[offset:offset+last].copy())
         #print(batch.head())
         batch['text'] = batch['text'].apply(parse_text)
@@ -50,8 +50,8 @@ def read_batches(num_batches, dir=DIR, small=True):
     
     print("Loaded partials")
     df = pd.concat(df)
-    print(len(df))
-    print(df.head())
+    #print(len(df))
+    #print(df.head())
     return df
 
 def to_parquet(df, dir=DIR, small=True):
@@ -59,9 +59,6 @@ def to_parquet(df, dir=DIR, small=True):
     if small:
         filename = dir + 'arxiv_all_small.parquet'
     df.to_parquet(filename)
-
-    df = pd.read_parquet(filename)
-    print(df.head())
 
 def main():
     df = load_json(JSON_FILE)
