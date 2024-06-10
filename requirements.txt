@@ -1,0 +1,7 @@
+streamlit
+pandas
+urllib
+xml
+io
+os
+sentence_transformers
