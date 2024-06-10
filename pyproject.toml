@@ -4,6 +4,6 @@ requires = [
     "streamlit>=1.35.0",
     "pandas>=2.2.2",
     "sentence_transformers>=3.0.1",
-    "pinecone-client>=3.1.0",
+    "pinecone>=4.0.0",
     ]
 build-backend = "setuptools.build_meta"
