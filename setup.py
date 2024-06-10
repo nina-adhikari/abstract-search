@@ -9,4 +9,5 @@ setup(name='abstract_search',
       author_email='ninamadhikari@gmail.com',
       # license='MIT',
       packages=setuptools.find_packages(),
-      zip_safe=False)
+      zip_safe=False
+)
