@@ -11,15 +11,21 @@ from transformers import AutoTokenizer, AutoModel
 MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
 #tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 #model = AutoModel.from_pretrained(MODEL_NAME)
-model = SentenceTransformer(MODEL_NAME)
 
-df = pd.read_parquet('data/arxiv_all_small.parquet').drop(columns=['index'])
+@st.cache_resource
+def load_model(name):
+    return SentenceTransformer(name)
+
+@st.cache_resource
+def load_data(file_name):
+    return pd.read_parquet(file_name).drop(columns=['index'])
 
 api_key = st.secrets['PINECONE_API_KEY']
 
-# configure client
-pc = Pinecone(api_key=api_key)
-index = pc.Index("arxiv-semantic-search")
+@st.cache_resource
+def load_index(index_name):
+    pc = Pinecone(api_key=api_key)
+    return pc.Index(index_name)
 
 def query_arxiv(input, search=True):
     baseUrl = 'https://export.arxiv.org/api/query?'
@@ -60,15 +66,16 @@ def prettify(result):
     <small>*{result['Authors']}*</small>  
     **Abstract**: {result['Abstract'][:200]}...'''
 
-def semantic_search(text):
-    global df
-    global model
+def semantic_search(text, model, df, index):
     encoded = model.encode(text).tolist()
 
     results = index.query(vector=encoded, top_k=10, include_metadata=False)
     return [df.iloc[int(entry['id'])]['id'] for entry in results['matches']]
 
 def main():
+    model = load_model(MODEL_NAME)
+    df = load_data('data/arxiv_all_small.parquet')
+    index = load_index("arxiv-semantic-search")
     st.title("Abstract search")
 
     st.write(
@@ -87,7 +94,8 @@ def main():
             st.write("Empty")
         else:
             arxiv_results = traverse(query_arxiv(query))
-            semantic_results = traverse(query_arxiv(semantic_search(query), search=False))
+            sem = semantic_search(query, model, df, index)
+            semantic_results = traverse(query_arxiv(sem, search=False))
             col1, col2 = st.columns(2)
             with col1:
                 st.subheader("Ordinary search")
