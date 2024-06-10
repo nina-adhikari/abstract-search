@@ -40,13 +40,13 @@ def write_batches(dataframe, num_batches, dir=DIR):
         #print(batch.head())
         batch.to_feather(dir + f'arxiv_{i}_cols.feather')
 
-def read_batches(num_batches, dir=DIR, small=True):
+def read_batches(num_batches, dir=DIR, col='id'):
     df = [0]*num_batches
     for i in range(num_batches):
         df[i] = pd.read_feather(dir + f'arxiv_{i}_cols.feather')
-        if small:
+        if col:
             df[i]['index'] = df[i].index
-            df[i] = df[i][['index', 'id']]
+            df[i] = df[i][['index', col]]
     
     print("Loaded partials")
     df = pd.concat(df)
@@ -54,10 +54,10 @@ def read_batches(num_batches, dir=DIR, small=True):
     #print(df.head())
     return df
 
-def to_parquet(df, dir=DIR, small=True):
+def to_parquet(df, dir=DIR, col='id'):
     filename = dir + 'arxiv_all.parquet'
-    if small:
-        filename = dir + 'arxiv_all_small.parquet'
+    if col:
+        filename = f"{dir}arxiv_all_{col}.parquet"
     df.to_parquet(filename)
 
 def main():
