@@ -3,35 +3,23 @@ import pandas as pd
 import urllib, urllib.request
 import xml.etree.ElementTree as ET
 from io import StringIO
-from sentence_transformers import SentenceTransformer
-import os
-from pinecone import Pinecone
-from transformers import AutoTokenizer, AutoModel
+from abstract_search import search
 
 SHOW_CLASSIC_SEARCH = False
 NUM_RESULTS = 10
-
-MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
-DATA_FILE_NAME = 'data/arxiv_all_small.parquet'
-INDEX_NAME = "arxiv-semantic-search"
-
 API_KEY = st.secrets['PINECONE_API_KEY']
-#tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-#model = AutoModel.from_pretrained(MODEL_NAME)
+
+DATA_FILE_NAME = 'data/arxiv_all_small.parquet'
 
 @st.cache_resource
-def load_model(name):
-    return SentenceTransformer(name)
+def load_model(api_key):
+    return search.SemanticModel(api_key)
 
 @st.cache_resource
 def load_data(file_name):
     return pd.read_parquet(file_name).drop(columns=['index'])
 
 @st.cache_resource
-def load_index(index_name, api_key):
-    pc = Pinecone(api_key=api_key)
-    return pc.Index(index_name)
-
 def query_arxiv(input, search=True):
     baseUrl = 'https://export.arxiv.org/api/query?'
     if search:
@@ -79,16 +67,14 @@ def show_results(results):
             str(i+1) + ". " + prettify(result),
             unsafe_allow_html=True
         )
-def semantic_search(text, model, df, index, top_k=10):
-    encoded = model.encode(text).tolist()
 
-    results = index.query(vector=encoded, top_k=top_k, include_metadata=False)
-    return [df.iloc[int(entry['id'])]['id'] for entry in results['matches']]
+def semantic_search(text, model, df, num_results=10):
+    results = model.results(text=text, num_results=num_results)
+    return [df.iloc[int(entry['id'])]['id'] for entry in results]
 
 def main():
-    model = load_model(MODEL_NAME)
     df = load_data(DATA_FILE_NAME)
-    index = load_index(INDEX_NAME, API_KEY)
+    model = load_model(API_KEY)
     st.title("Abstract search")
 
     st.write(
@@ -100,13 +86,12 @@ def main():
     form = st.form("search")
 
     query = form.text_input("Search ArXiv abstracts: :red[\*]", placeholder="Enter search term")
-    #button = form.form_submit_button("Search", on_click=search, args=[query])
     button = form.form_submit_button("Search")
     if button:
         if not query:
             form.error("Search term is empty!")
         else:
-            sem = semantic_search(query, model=model, df=df, index=index, top_k=NUM_RESULTS)
+            sem = semantic_search(query, model=model, df=df, num_results=NUM_RESULTS)
             semantic_results = traverse(query_arxiv(sem, search=False))
             with st.container():
                 st.subheader("Semantic search results")
