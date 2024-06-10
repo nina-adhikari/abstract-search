@@ -9,7 +9,7 @@ SHOW_CLASSIC_SEARCH = False
 NUM_RESULTS = 10
 API_KEY = st.secrets['PINECONE_API_KEY']
 
-DATA_FILE_NAME = 'data/arxiv_all_small.parquet'
+DATA_FILE_NAME = 'data/arxiv_all_id.parquet'
 
 @st.cache_resource
 def load_model(api_key):

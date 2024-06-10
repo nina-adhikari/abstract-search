@@ -48,7 +48,7 @@ def read_batches(num_batches, dir=DIR, col='id'):
             df[i]['index'] = df[i].index
             df[i] = df[i][['index', col]]
     
-    print("Loaded partials")
+    #print("Loaded partials")
     df = pd.concat(df)
     #print(len(df))
     #print(df.head())

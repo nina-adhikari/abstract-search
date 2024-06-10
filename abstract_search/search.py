@@ -1,6 +1,8 @@
 from functools import lru_cache
 from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone
+import torch
+
 #from transformers import AutoTokenizer, AutoModel
 
 #tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
@@ -15,7 +17,8 @@ class SemanticModel:
         self.load_index(index_name, api_key)
     
     def load_encoder(self, name):
-        self.encoder = SentenceTransformer(name)
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.encoder = SentenceTransformer(name, device=self.device)
 
     def load_index(self, index_name, api_key):
         pc = Pinecone(api_key=api_key)
